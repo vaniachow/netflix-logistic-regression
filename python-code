@@ -1,0 +1,90 @@
+import numpy as np
+import pandas as pd
+
+def load(filename):
+    return df
+
+#Given the Naive Bayes assumption, we first find the probability that users like the predictor movies given they like the target movie "Love Actually"
+def get_p_x_given_y(x_column, y_column, df):
+    """
+    Computes P(X = 1 | Y = 1) and P(X = 1 | Y = 0), where X is a single feature (column).
+    x_column: name of the column containing the feature X.
+    y_column: name of the class containing the class label.
+    return: [P(X = 1 | Y = 1), P(X = 1 | Y = 0)]
+    """
+    num_x_given_y1 = df.loc[df[y_column] == 1, x_column].sum() + 1
+    denom_y1 = df.loc[df[y_column] == 1, x_column].count() + 2
+    p_x_given_y1 = num_x_given_y1 / denom_y1
+
+    # Compute P(X = 1 | Y = 0)
+    num_x_given_y0 = df.loc[df[y_column] == 0, x_column].sum() + 1
+    denom_y0 = df.loc[df[y_column] == 0, x_column].count() + 2
+    p_x_given_y0 = num_x_given_y0 / denom_y0
+    return [p_x_given_y0, p_x_given_y1]
+
+#We then store the calculated value for all movies in a nested list
+def get_all_p_x_given_y(y_column, df):
+    # We want to store P(X_i=1 | Y=y) in p_x_given_y[i][y]
+    all_p_x_given_y = np.zeros((df.shape[1] - 1, 2))
+    for i, col_name in enumerate(df.columns[:-1]):
+        p_x_given_y0, p_x_given_y1 = get_p_x_given_y(col_name, y_column, df)
+        all_p_x_given_y[i][1] = p_x_given_y1
+        all_p_x_given_y[i][0] = p_x_given_y0
+    print(len(all_p_x_given_y))
+    return all_p_x_given_y
+
+#Calculating the unjoined probability that a user likes "Love Actually"
+def get_p_y(y_column, df):
+    p_y = df[y_column].mean()
+    return p_y
+
+# Calculates the joint probability of a given row 
+def joint_prob(xs, y, all_p_x_given_y, p_y):
+    j_prob = p_y
+    for i, x in enumerate(xs):
+        if x == 0:
+            val = 1 - all_p_x_given_y[i][y]
+        if x == 1:
+            val = all_p_x_given_y[i][y]
+        j_prob *= val
+    return j_prob
+
+#Computes the probability of a single row given y
+def get_prob_y_given_x(y, xs, all_p_x_given_y, p_y):
+    lst = []
+    n, _ = all_p_x_given_y.shape  # n is the number of features/columns
+    if y == 0:
+        prob_y_given_x = joint_prob(xs, y, all_p_x_given_y, p_y) * (1 - p_y)
+    if y == 1:
+        prob_y_given_x = joint_prob(xs, y, all_p_x_given_y, p_y) * p_y
+    return prob_y_given_x
+
+# Compute the accuracy of the test by running the trained model on testing data, calculating the percentage of correctly predicted datapoints. 
+def compute_accuracy(all_p_x_given_y, p_y, df):
+    X_test = df.drop(columns="Label")
+    y_test = df["Label"]
+    num_correct = 0
+    total = len(y_test)
+    for i, xs in X_test.iterrows():
+        y_zero = get_prob_y_given_x(0, xs, all_p_x_given_y, p_y)
+        y_one = get_prob_y_given_x(1, xs, all_p_x_given_y, p_y)
+        y_pred = 0
+        if y_one > y_zero:
+            y_pred = 1
+        if y_pred == y_test[i]:
+            num_correct += 1
+    accuracy = num_correct / total
+    return accuracy
+
+    # load the training set
+df_train = load("netflix-train.csv")
+
+    #compute model parameters (i.e. P(Y), P(X_i|Y))
+all_p_x_given_y = get_all_p_x_given_y("Label", df_train)
+p_y = get_p_y("Label", df_train)
+
+    # load the test set
+df_test = load("netflix-test.csv")
+
+print(f"Training accuracy: {compute_accuracy(all_p_x_given_y, p_y, df_train)}")
+print(f"Test accuracy: {compute_accuracy(all_p_x_given_y, p_y, df_test)}")
