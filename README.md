@@ -1,4 +1,4 @@
-# netflix-logistic-regression-naive-bayes
+# netflix-naive-bayes
 
 **Objective**: The objective of this project is to use the Netflix dataset to develop a machine learning model that can accurately predict the likelihood that a user will give a rating of 5 to the movie "Love Actually" based on their preferences for the 30 other movies.
 
